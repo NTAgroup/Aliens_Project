@@ -1,0 +1,9 @@
+{
+
+"avatar" = "арт";
+
+"audio": ["Arctic Monkeys", "Bring Me The Horizon", "Cold", "Crossfade", "Imagine Dragons", "John Newman", "Linkin Park", "Muse", "Mushmellow", "Neighbourhood", "Nickelback", "Nirvana", "Placebo", "Poets Of The Fall", "Stone Sour", "The Beatles", "The Offspring", "The Pretty Reckless", "Thousand Foot Krutch", "Three Days Grace";]
+
+
+
+}

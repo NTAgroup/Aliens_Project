@@ -1,0 +1,7 @@
+{
+
+"avatar" = "арт к 'игры(positive)'"; "геймер арт";
+
+"audio": ["Gilead", "Morrowind", "OrangeBug Studios", "Lucas King", "Irfan Muh Luster ", "Сlassical Сat", "Jeremy Soule", "Brad Derrick", "Rik Schaffer", "TES V: Special Edition Soundtrack", "Make Them Suffer", "36 Crazy Fists", "Blur", "Enter Shikari", "Fall Out Boy", "Godsmack", "Hollywood Undead", "I See Stars", "Myka, Relocate", "Parkway Drive", "Radiohead", "Rise Of The Northstar", "SOAD", "We Are Harlot", "While She Sleeps", "Whitechapel";]
+
+}

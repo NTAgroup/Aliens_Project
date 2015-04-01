@@ -1,0 +1,610 @@
+unit Unit1;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, AdditionalFunctions,
+  XSuperJSON, XSuperObject;
+
+type
+  TForm4 = class(TForm)
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+  procedure LoadBotCharacteristics;
+  function BuildCommentForVK(AResponseStream : TStream) : String;
+  function BuildPostForVK : String;
+  function BuildPostForTwitter : String;
+  function PostWithLittleThoughts (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  function PostWithLittleComments (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  function PostWithThoughts (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  procedure PostReader(APostForRememberStream : TStream);
+  function TimeToPost : Integer;
+  function PostForVK : String;
+  function PostForTwitter : String;
+  function Avatar(BotType : TStringList) : String;
+  function Audio(BotType : TStringList) : String;
+  function PostForInst(topic : String) : String;
+  function CheckTopic(AResponseStream: TStream; ATopic: String): Boolean;
+  function CheckTopicsInSentence(AResponseStream: TStream): TStringList;
+  procedure LoadBots;
+var
+  Form4: TForm4;
+  BotType : TStringList;
+  BotAccount : TStringList;
+  BotActivity : TStringList;
+  BotCharacteristics : TStringList;
+  CommentNegative : TStringList;
+  CommentPositive : TStringList;
+  Post : TStringList;
+  TopicsPositive : TStringList;
+  TopicsNegative : TStringList;
+  SmilesPositive : TStringList;
+  SmilesNegative : TStringList;
+  LearnedPhrases : TStringList;
+  PostTime : TStringList;
+  holidayIsAlreadyPosted : Boolean;
+
+implementation
+
+{$R *.fmx}
+
+function CheckTopic(AResponseStream: TStream; ATopic: String): Boolean;
+  var
+    st: TStringList;
+    i: Integer;
+  begin
+    st := TStringList.Create;
+    st.LoadFromStream(AResponseStream);
+    Result := False;
+    for I := 0 to st.Count-1 do
+      if st.Strings[i].Contains(ATopic) then
+         Result:=True;
+  end;
+
+  function CheckTopicsInSentence(AResponseStream: TStream): TStringList;
+  var
+    post, Sentences: TStringList;
+    i, j, substr: Integer;
+    str : String;
+  begin
+    post := TStringList.Create;
+    post.LoadFromStream(AResponseStream);
+
+    for i := 0 to post.Count - 1 do
+      begin
+        str := post.Strings[i];
+        substr := 0;
+        for j := 0 to str.Length - 1 do
+          if (str[j] = '.') and (str[j + 1]= ' ') or (str[j]='?') and (str[j + 1] = ' ') or (str[j] = '!') and (str[j + 1] = ' ') then
+            begin
+            Sentences.Add(str.Substring(substr, j - substr));
+            substr := j + 2;
+            end;
+      end;
+      Result := Sentences;
+  end;
+
+procedure LoadBots;
+begin
+    BotType := TStringList.Create;
+    BotAccount := TStringList.Create;
+    BotActivity := TStringList.Create;
+    BotCharacteristics := TStringList.Create;
+    CommentPositive := TStringList.Create;
+    CommentNegative := TStringList.Create;
+    Post := TStringList.Create;
+    TopicsPositive := TStringList.Create;
+    TopicsNegative := TStringList.Create;
+    SmilesPositive := TStringList.Create;
+    SmilesNegative := TStringList.Create;
+    LearnedPhrases := TStringList.Create;
+    PostTime := TStringList.Create;
+
+    BotType.Add('type=None');
+
+    BotAccount.Add('VK=false');
+    BotAccount.Add('Twitter=false');
+    BotAccount.Add('Instagram=false');
+
+    BotActivity.Add('ProfileChange=false');
+    BotActivity.Add('ContPulication=false');
+    BotActivity.Add('BlogComment=false');
+    BotActivity.Add('BlogRepost=false');
+    BotActivity.Add('Likes=false');
+    BotActivity.Add('RSSComment=false');
+    BotActivity.Add('PrePostMessage=false');
+  //  ShowMessage(DateToStr(date).Substring(0, 5));
+
+
+  end;
+
+  procedure LoadBotCharacteristics;  //Заполняет все списки характеристик бота
+  begin
+
+    if BotType.Values['type'] = 'None' then
+      ShowMessage('Не выбран тип бота!');
+    if BotType.Values['type'] = 'politic' then
+      begin
+        CommentPositive.LoadFromFile('politic_comment_positive.txt');
+        CommentNegative.LoadFromFile('politic_comment_negative.txt');
+        Post.LoadFromFile('politic_post.txt');
+        TopicsPositive.LoadFromFile('politic_topics_positive.txt');
+        TopicsNegative.LoadFromFile('politic_topics_negative.txt');
+        PostTime.LoadFromFile('politic_post_time.txt');
+        LearnedPhrases.LoadFromFile('politic_new_phrases.txt');
+      end;
+    if BotType.Values['type'] = 'artist' then
+    begin
+        CommentPositive.LoadFromFile('artist_comment_positive.txt');
+        CommentNegative.LoadFromFile('artist_comment_negative.txt');
+        Post.LoadFromFile('artist_post.txt');
+        TopicsPositive.LoadFromFile('artist_topics_positive.txt');
+        TopicsNegative.LoadFromFile('artist_topics_negative.txt');
+        SmilesPositive.LoadFromFile('artist_smiles_positive.txt');
+        SmilesNegative.LoadFromFile('artist_smiles_negative.txt');
+        PostTime.LoadFromFile('artist_post_time.txt');
+        LearnedPhrases.LoadFromFile('artist_new_phrases.txt');
+      end;
+    if BotType.Values['type'] = 'gamer' then
+    begin
+        CommentPositive.LoadFromFile('gamer_comment_positive.txt');
+        CommentNegative.LoadFromFile('gamer_comment_negative.txt');
+        Post.LoadFromFile('gamer_post.txt');
+        TopicsPositive.LoadFromFile('gamer_topics_positive.txt');
+        TopicsNegative.LoadFromFile('gamer_topics_negative.txt');
+        SmilesPositive.LoadFromFile('gamer_smiles_positive.txt');
+        SmilesNegative.LoadFromFile('gamer_smiles_negative.txt');
+        PostTime.LoadFromFile('gamer_post_time.txt');
+        LearnedPhrases.LoadFromFile('gamer_new_phrases.txt');
+      end;
+    if BotType.Values['type'] = 'traveler' then
+    begin
+        CommentPositive.LoadFromFile('traveler_comment_positive.txt');
+        CommentNegative.LoadFromFile('traveler_comment_negative.txt');
+        Post.LoadFromFile('traveler_post.txt');
+        TopicsPositive.LoadFromFile('traveler_topics_positive.txt');
+        TopicsNegative.LoadFromFile('traveler_topics_negative.txt');
+        PostTime.LoadFromFile('traveler_post_time.txt');
+        LearnedPhrases.LoadFromFile('traveler_new_phrases.txt');
+      end;
+
+  end;
+
+  function BuildCommentForVK(AResponseStream : TStream) : String;
+  var i, j, k, e, posK, negK, num, com, kOfSmiles: integer;
+  comment : String;
+  numbers : Array [0..4] of Integer;
+  begin
+      posK := 0;
+      for i := 0 to TopicsPositive.Count - 1 do
+        if CheckTopic(AResponseStream, TopicsPositive.Strings[i]) then
+          posK := posK + 1;
+
+      negK := 0;
+      for i := 0 to TopicsNegative.Count - 1 do
+        if CheckTopic(AResponseStream, TopicsNegative.Strings[i]) then
+         negK := negK + 1;
+
+
+      if negK >= posK then  //Билдим негативный коммент
+      begin
+        randomize;
+        num := random(4);
+//        num := num + 1;
+        for i := 0 to num do
+          begin
+            com := random(CommentNegative.Count);
+            k := 0;
+            e := 0;
+            for j := 0 to 3 do
+              if numbers[i] <> com then
+                k := k + 1;
+              if k = 4 then
+                begin
+                comment := comment + CommentNegative.Strings[com];
+                numbers[e] := com;
+                e := e + 1;
+                end;
+          end;
+          if (BotType.Values['type'] = 'gamer') or (BotType.Values['type'] = 'artist') then
+            begin                        //Ставим смайлы (опция только для геймера и художника
+              kOfSmiles := random(3);
+              if kOfSmiles = 1 then       //В одном из трех случаев смайл ставится
+                if com >= num then
+                  comment := comment + SmilesNegative.Strings[com - num]   //Алгоритм выбор
+                else                                                       //смайла зависел от
+                  comment := comment + SmilesNegative.Strings[com + num];  //моего настроения.
+            end;
+      end
+      else    //Билдим позитивный коммент
+        begin
+        randomize;
+        num := random(4);
+//        num := num + 1;
+        for i := 0 to num do
+          begin
+            com := random(CommentPositive.Count);
+            k := 0;
+            e := 0;
+            for j := 0 to 3 do
+              if numbers[i] <> com then
+                k := k + 1;
+              if k = 4 then
+              begin
+                comment := comment + CommentPositive.Strings[com];
+                numbers[e] := com;
+                e := e + 1;
+              end;
+
+          end;
+
+          if (BotType.Values['type'] = 'gamer') or (BotType.Values['type'] = 'artist') then
+            begin
+              kOfSmiles := random(3);
+              if kOfSmiles = 1 then
+                if com >= num then
+                  comment := comment + SmilesPositive.Strings[com - num]
+                else
+                  comment := comment + SmilesPositive.Strings[com + num];
+          end;
+        end;
+        Result := comment;
+        PostReader(AResponseStream);
+  end;
+
+
+  function GetHoliday : String;
+  var X : ISuperObject;
+  AStream : TStringStream;
+  congrat : ISuperArray;
+  begin
+//    if BotType.Values['type'] = 'politic' then
+//      AStream.LoadFromFile('politic_holiday.txt');
+//    if BotType.Values['type'] = 'artist' then
+//      AStream.LoadFromFile('artist_holiday.txt');
+    if BotType.Values['type'] = 'gamer' then
+      AStream.LoadFromFile('gamer_holiday.txt');
+//    if BotType.Values['type'] = 'traveler' then
+//      AStream.LoadFromFile('traveler_holiday.txt');
+
+    X := SO(AStream.DataString);  // Загружает файл с праздниками в библиотеку
+    congrat := X.A[DateToStr(date).Substring(0, 5)];
+    holidayIsAlreadyPosted := false;                     //ДОПИСАТЬ, ИСПРАВИТЬ!!! Дата записывается в файл!
+    Result := congrat.S[0];
+    holidayIsAlreadyPosted := true;
+  end;
+
+  function BuildPostForVK : String;
+  var numOfPhr, e, numOfCom, numOfSmile : integer;
+  notToUseAgain : Array [0..2] of integer;
+  fullPost : String;
+  begin
+    randomize;
+    numOfPhr := random (2);
+    numOfPhr := numOfPhr + 1;
+    e := 0;
+
+    fullPost := postWithThoughts(numOfPhr, fullPost, Post);//Заполняем пост мыслями
+
+
+    numOfCom := random (2);
+    numOfCom := numOfCom + 1;
+    numOfSmile := random (2);
+    numOfSmile := numOfSmile + 1;
+    e := 0;
+
+    if BotType.Values['type'] = 'artist' then   //Если художник, комментируем
+      fullPost := postWithThoughts(numOfSmile, fullPost, SmilesPositive)
+    else
+      fullPost := fullPost + postWithThoughts(numOfCom, fullPost, CommentPositive);
+
+  Result := fullPost;
+  end;
+
+  function postWithThoughts (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  var i, k, e, j, phrase : integer;
+  notToUseAgain : Array [0..2] of integer;
+  begin
+    for i := 0 to numOfPhr - 1 do   //Заполняем пост мыслями
+      begin
+        k := 0;
+        e := 0;
+        phrase := random(list.Count);
+        for j := 0 to 1 do
+          begin
+            if phrase <> notToUseAgain[j] then
+              k := k + 1;
+            if k = 2 then
+              begin
+                fullPost := fullPost + list.Strings[phrase];
+                notToUseAgain[e] := phrase;
+                e := e + 1;
+              end;
+          end;
+      end;
+  Result := fullPost;
+  end;
+
+  function BuildPostForTwitter : String;
+  var numOfPhr, e, numOfCom, numOfSmile : integer;
+  fullPost : String;
+  begin
+    randomize;
+    numOfPhr := random (2);
+    numOfPhr := numOfPhr + 1;
+    e := 0;
+
+    fullPost := postWithLittleThoughts(numOfPhr, fullPost, Post);//Заполняем пост мыслями
+
+
+    numOfCom := random (2);
+    numOfCom := numOfCom + 1;
+    numOfSmile := random (2);
+    numOfSmile := numOfSmile + 1;
+    e := 0;
+
+    if BotType.Values['type'] = 'artist' then   //Если художник, ставим смайлы, не художник - комментим
+      fullPost := fullPost + postWithLittleComments(numOfPhr, fullPost, CommentPositive)
+    else
+      fullPost := fullPost + postWithLittleComments(numOfPhr, fullPost, SmilesPositive);
+
+  Result := fullPost;
+  end;
+
+  function PostWithLittleThoughts (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  var k, e: integer;
+  begin
+  if numOfPhr = 1 then
+    begin
+      e := random(list.Count);
+      fullPost := list.Strings[e];
+      if fullPost.Length > 90 then
+        while fullPost.Length > 90 do
+          begin
+            e := random(list.Count);
+            fullPost := list.Strings[e];
+          end;
+    end
+  else    //Число фраз равно двум
+    begin
+      e := random(list.Count);
+      k := random(list.Count);
+      if k = e then
+        while k = e do
+          k := random(list.Count);
+
+      if list.Strings[e].Length + list.Strings[k].Length > 90 then
+        while list.Strings[e].Length + list.Strings[k].Length > 90 do
+          begin
+            e := random(list.Count);
+            k := random(list.Count);
+              if k = e then
+                while k = e do
+                  k := random(list.Count);
+          end;
+
+      fullPost := list.Strings[e] + list.Strings[k];
+    end;
+
+  Result := fullPost;
+  end;
+
+  function PostWithLittleComments (numOfPhr : integer; fullPost : String; list : TStringList) : String;
+  var e, k : integer;
+  begin
+    if numOfPhr = 1 then
+    begin
+      e := random(list.Count);
+      if list.Strings[e].Length > 50 then
+        while list.Strings[e].Length > 50 do
+          begin
+            e := random(list.Count);
+          end;
+      fullPost := fullPost + list.Strings[e];
+    end
+  else
+    begin
+      e := random(list.Count);
+      k := random(list.Count);
+      if k = e then
+        while k = e do
+          k := random(list.Count);
+
+      if list.Strings[e].Length + list.Strings[k].Length > 50 then
+        while list.Strings[e].Length + list.Strings[k].Length > 50 do
+          begin
+            e := random(list.Count);
+            k := random(list.Count);
+              if k = e then
+                while k = e do
+                  k := random(list.Count);
+          end;
+
+      fullPost := fullPost + list.Strings[e] + list.Strings[k];
+    end;
+  end;
+
+  procedure newPhrasesReader(APostForRememberStream : TStream);  //ВНИМАНИЕ!!!!
+  var a : Integer;                                                         //Читает пост, находит
+  begin                                                                    //фразы по своим топикам,
+    LearnedPhrases := CheckTopicsInSentence(APostForRememberStream); //записывает в файл.
+    randomize;
+    a := random(LearnedPhrases.Count);
+    if BotType.Values['type'] = 'artist' then
+      LearnedPhrases.SaveToFile('artist_new_phrases.txt');
+    if BotType.Values['type'] = 'gamer' then
+      LearnedPhrases.SaveToFile('gamer_new_phrases.txt');
+    if BotType.Values['type'] = 'politic' then
+      LearnedPhrases.SaveToFile('politic_new_phrases.txt');
+
+    if BotType.Values['type'] = 'traveler' then
+      LearnedPhrases.SaveToFile('traveler_new_phrases.txt');
+  end;
+
+  procedure PostReader(APostForRememberStream : TStream);
+  var i, k : integer;
+  begin
+  k := 0;
+    for i := 0 to TopicsPositive.Count - 1 do
+        if CheckTopic(APostForRememberStream, TopicsPositive.Strings[i]) then
+          k := k + 1;
+    if k > 2 then
+      newPhrasesReader(APostForRememberStream);
+  end;
+
+  function TimeToPost : Integer;
+  var diff, diviation, a, b, c, res : Integer;
+  begin
+    diff := PostTime.Strings[0].toInteger;
+    diviation := PostTime.Strings[1].toInteger;
+    randomize;
+    a := random(600000);
+    b := random(3);
+    c := random(diviation);
+
+    if b = 0 then
+      res := diff - diviation + a;
+    if b = 1 then
+      res := diff + diviation + a;
+    if b = 2 then
+      res := diff + diviation - a;
+
+    Result := res;
+  end;
+
+  function PostLearnedPhrases : String;
+  var a : integer;
+      post : String;
+      hasTopic : boolean;
+  i: Integer;
+  begin
+  hasTopic := false;
+  while (LearnedPhrases.Count <> 0) or (hasTopic = false) do
+    begin
+      randomize;
+      a := random(LearnedPhrases.Count);
+      for i := 0 to TopicsPositive.Count - 2 do
+        if (LearnedPhrases.Strings[a].Contains(TopicsPositive.Strings[i])) and
+        (LearnedPhrases.Strings[a].Length <= 140) then
+          hasTopic := true;
+      if hasTopic = true then
+        post := LearnedPhrases.Strings[a];
+      LearnedPhrases.Delete(a);
+    end;
+    Result := post;
+  end;
+
+  function PostForVK : String;
+  var a : integer;
+      learnedPhrase : String;
+  begin
+    randomize;
+    a := random(3);
+
+
+    if (LearnedPhrases.Count <> 0) and (a = 0) then
+      begin
+        learnedPhrase := PostLearnedPhrases;
+        if learnedPhrase <> null then
+          Result := learnedPhrase
+        else
+          a := 1;
+      end
+    else
+      a := 1;
+
+    if (a = 1) and (holidayIsAlreadyPosted = false)
+    and (BotType.Values['type'] = 'gamer') then
+    begin
+      if GetHoliday.length <> 0 then
+        Result := GetHoliday;
+    end
+    else
+        Result := BuildPostForVK;
+
+    if a = 2 then
+      Result := BuildPostForVK;
+  end;
+
+  function PostForTwitter : String;
+  var a : integer;
+      str : String;
+  begin
+    randomize;
+    a := random(3);
+
+    if (LearnedPhrases.Count <> 0) and (a = 0) then
+      begin
+        str := PostLearnedPhrases;
+        if (str.length <= 140) then
+          Result := str;
+      end
+    else
+      a := 1;
+
+    if (a = 1) and (holidayIsAlreadyPosted = false) and (BotType.Values['type'] = 'gamer') then
+      if (GetHoliday.length <> 0) and (GetHoliday.length <= 140) then
+        Result := GetHoliday
+      else
+        Result := BuildPostForTwitter;
+
+    if a = 2 then
+      Result := BuildPostForTwitter;
+  end;
+
+  function Avatar(BotType : TStringList) : String;
+  var X : ISuperObject;
+  AStream : TStringStream;
+  avatar : ISuperArray;
+  begin
+    AStream.LoadFromFile(BotType.Values['type'] + '_content.txt');
+
+    X := SO(AStream.DataString);
+    avatar := X.A['avatar'];
+    randomize;
+    Result := avatar.S[random(avatar.length)];
+  end;
+
+  function Audio(BotType : TStringList) : String;
+  var X : ISuperObject;
+  AStream : TStringStream;
+  audio : ISuperArray;
+  begin
+    AStream.LoadFromFile(BotType.Values['type'] + '_content.txt');
+
+    X := SO(AStream.DataString);
+    audio := X.A['audio'];
+    randomize;
+    Result := audio.S[random(audio.length)];
+  end;
+
+
+  //INSTAGRAM TIME!!!
+
+  function PostForInst(topic : String) : String;  // topic == tag
+  var a, b, c : integer;
+      notToUseAgain : Array [0..3] of Integer;
+      fullPost : String;
+  begin
+    randomize;
+    a := random(1);
+    b := random(1);
+    c := random(1);
+
+    if topic <> null then
+      fullPost := topic + ' ';
+    if b = 0 then
+      fullPost := fullPost + CommentPositive.Strings[random(CommentPositive.Count)] + ' ';
+    if c = 0 then
+      fullPost := fullPost + SmilesPositive.Strings[random(SmilesPositive.Count)];
+
+    Result := fullPost;
+
+  end;
+
+end.

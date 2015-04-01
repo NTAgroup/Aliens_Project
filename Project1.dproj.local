@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.097,=C:\Users\Asus\Desktop\Interface\x-superobject\XSuperObject.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.711,=C:\Users\Asus\Desktop\Interface\x-superobject\XSuperJSON.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.693,=C:\Users\Asus\Desktop\Interface\AdditionalFunctions.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.774,C:\Users\Asus\Documents\Embarcadero\Studio\Projects\Project1.dproj=C:\Users\Asus\Desktop\Interface\Project1.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.805,=C:\Users\Asus\Desktop\Interface\MainUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.043,=C:\Users\Asus\Desktop\Interface\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.763,=C:\Users\Asus\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+  </Transactions>
+</BorlandProject>
